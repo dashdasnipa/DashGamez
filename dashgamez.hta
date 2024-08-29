@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dash Gamez</title>
+    <htas:application 
+        id="DashGamezApp"
+        applicationname="Dash Gamez"
+        border="thin"
+        borderstyle="normal"
+        caption="yes"
+        maximizebutton="yes"
+        minimizebutton="yes"
+        showintaskbar="yes"
+        singleinstance="yes"
+        sysmenu="yes"
+        windowstate="normal"
+        navigable="yes"
+        scroll="auto"
+    />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .game-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .game-icon {
+            width: 64px;
+            height: 64px;
+            margin-right: 20px;
+        }
+        .game-info {
+            max-width: 600px;
+        }
+        .game-name {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .game-desc {
+            margin: 5px 0;
+        }
+        .game-version {
+            color: #555;
+        }
+        .in-development {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dash Gamez</h1>
+    <div id="gamesList"></div>
+
+    <script>
+        function loadGames() {
+            const fso = new ActiveXObject("Scripting.FileSystemObject");
+            const currentDir = fso.GetParentFolderName(document.location.pathname);
+            const gamesFolder = fso.GetFolder(currentDir + "\\games");
+            const gameFolders = new Enumerator(gamesFolder.SubFolders);
+
+            let gamesList = document.getElementById('gamesList');
+            gamesList.innerHTML = '';
+
+            for (; !gameFolders.atEnd(); gameFolders.moveNext()) {
+                const folder = gameFolders.item();
+                const iconPath = folder.Path + "\\Icon.png";
+                const iniPath = folder.Path + "\\data.ini";
+
+                if (fso.FileExists(iniPath)) {
+                    const iniFile = fso.OpenTextFile(iniPath, 1);
+                    const iniContent = iniFile.ReadAll();
+                    iniFile.Close();
+
+                    let gameInfo = parseINI(iniContent);
+
+                    let gameVersion = gameInfo['ver'];
+                    if (gameInfo['beta'] === "true") {
+                        gameVersion += 'b';
+                    }
+
+                    let gameSection = `
+                        <div class="game-container">
+                            <img src="${iconPath}" class="game-icon" alt="Game Icon">
+                            <div class="game-info">
+                                <div class="game-name">${gameInfo['name']}</div>
+                                <div class="game-desc">${gameInfo['desc']}</div>
+                                <div class="game-version">Version: ${gameVersion}</div>
+                                ${gameInfo['debugging'] === "true" ? '<div class="in-development">In Development</div>' : ''}
+                            </div>
+                        </div>
+                    `;
+
+                    gamesList.innerHTML += gameSection;
+                }
+            }
+        }
+
+        function parseINI(iniContent) {
+            const lines = iniContent.split('\n');
+            let result = {};
+            let currentSection = null;
+
+            for (let line of lines) {
+                line = line.trim();
+                if (line.length === 0 || line.startsWith(';')) continue;
+
+                if (line.startsWith('[') && line.endsWith(']')) {
+                    currentSection = line.substring(1, line.length - 1);
+                } else if (currentSection === "Info") {
+                    const [key, value] = line.split('=');
+                    if (key && value) {
+                        result[key.trim()] = value.trim();
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        window.onload = loadGames;
+    </script>
+</body>
+</html>
